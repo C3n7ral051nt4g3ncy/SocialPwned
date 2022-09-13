@@ -110,12 +110,7 @@ def gpics(gaiaID, client, cookies, headers, regex_albums, regex_photos, headless
         print("=> No album")
         return False
 
-    # open('debug.html', 'w').write(repr(out["source"]))
-    results = re.compile(regex_albums).findall(out["source"])
-
-    list_albums_length = len(results)
-
-    if results:
+    if results := re.compile(regex_albums).findall(out["source"]):
         exifeater = ExifEater()
         pics = []
         for album in results:
@@ -135,7 +130,12 @@ def gpics(gaiaID, client, cookies, headers, regex_albums, regex_photos, headless
                 except:
                     pass
 
-        print(f"=> {list_albums_length} albums{', ' + str(len(pics)) + ' photos' if list_albums_length else ''}")
+        list_albums_length = len(results)
+
+        print(
+            f"=> {list_albums_length} albums{f', {len(pics)} photos' if list_albums_length else ''}"
+        )
+
         for pic in pics:
             try:
                 req = client.get(pic)

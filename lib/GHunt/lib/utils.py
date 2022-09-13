@@ -31,7 +31,7 @@ def within_docker():
 
 def is_email_google_account(httpx_client, auth, cookies, email, hangouts_token):
     host = "https://people-pa.clients6.google.com"
-    url = "/v2/people/lookup?key={}".format(hangouts_token)
+    url = f"/v2/people/lookup?key={hangouts_token}"
     body = """id={}&type=EMAIL&matchType=EXACT&extensionSet.extensionNames=HANGOUTS_ADDITIONAL_DATA&extensionSet.extensionNames=HANGOUTS_OFF_NETWORK_GAIA_LOOKUP&extensionSet.extensionNames=HANGOUTS_PHONE_DATA&coreIdParams.useRealtimeNotificationExpandedAcls=true&requestMask.includeField.paths=person.email&requestMask.includeField.paths=person.gender&requestMask.includeField.paths=person.in_app_reachability&requestMask.includeField.paths=person.metadata&requestMask.includeField.paths=person.name&requestMask.includeField.paths=person.phone&requestMask.includeField.paths=person.photo&requestMask.includeField.paths=person.read_only_profile_info&requestMask.includeContainer=AFFINITY&requestMask.includeContainer=PROFILE&requestMask.includeContainer=DOMAIN_PROFILE&requestMask.includeContainer=ACCOUNT&requestMask.includeContainer=EXTERNAL_ACCOUNT&requestMask.includeContainer=CIRCLE&requestMask.includeContainer=DOMAIN_CONTACT&requestMask.includeContainer=DEVICE_CONTACT&requestMask.includeContainer=GOOGLE_GROUP&requestMask.includeContainer=CONTACT"""
 
     headers = {
@@ -44,8 +44,11 @@ def is_email_google_account(httpx_client, auth, cookies, email, hangouts_token):
     req = httpx_client.post(host + url, data=body.format(email), headers=headers, cookies=cookies)
     data = json.loads(req.text)
     #pprint(data); exit()
-    if not "matches" in data:
-        print(colors.bad + " This email address does not belong to a Google Account." + colors.end)
+    if "matches" not in data:
+        print(
+            f"{colors.bad} This email address does not belong to a Google Account.{colors.end}"
+        )
+
         return False
 
     return data
@@ -88,24 +91,18 @@ def get_account_name(httpx_client, gaiaID, data, internal_auth, internal_token, 
     req = httpx_client.get(f"https://www.google.com/maps/contrib/{gaiaID}")
     gmaps_source = req.text
     match = re.search(r'<meta content="Contributions by (.*?)" itemprop="name">', gmaps_source)
-    if not match:
-        return None
-    return match[1]
+    return match[1] if match else None
 
 def image_hash(img):
-    hash = str(imagehash.average_hash(img))
-    return hash
+    return str(imagehash.average_hash(img))
 
 def detect_default_profile_pic(hash):
-    if hash in ['00001818183c7e7e', 'ffffc3c3e7c38181', '00003c3c3c3c0000']:
-        return True
-    return False
+    return hash in ['00001818183c7e7e', 'ffffc3c3e7c38181', '00003c3c3c3c0000']
 
 def sanitize_location(location):
     not_country = False
     not_town = False
     town = "?"
-    country = "?"
     if "city" in location:
         town = location["city"]
     elif "village" in location:
@@ -116,8 +113,9 @@ def sanitize_location(location):
         town = location["municipality"]
     else:
         not_town = True
-    if not "country" in location:
+    if "country" not in location:
         not_country = True
+        country = "?"
         location["country"] = country
     if not_country and not_town:
         return False
@@ -127,21 +125,25 @@ def sanitize_location(location):
 
 def get_driverpath():
     tmprinter = TMPrinter()
-    drivers = [str(x.absolute()) for x in Path('.').rglob('chromedriver*') if not "chromedriver_autoinstaller" in str(x)]
-    if drivers:
+    if drivers := [
+        str(x.absolute())
+        for x in Path('.').rglob('chromedriver*')
+        if "chromedriver_autoinstaller" not in str(x)
+    ]:
         return drivers[0]
+    if driver := shutil.which("chromedriver"):
+        return driver
+    tmprinter.out("I can't find the chromedriver, so I'm downloading and installing it for you...")
+    path = chromedriver_autoinstaller.install(cwd=True)
+    tmprinter.out("")
+    if drivers := [
+        str(x.absolute())
+        for x in Path('.').rglob('chromedriver*')
+        if x.name.lower() in ["chromedriver", "chromedriver.exe"]
+    ]:
+        return path
     else:
-        driver = shutil.which("chromedriver")
-        if driver:
-            return driver
-        tmprinter.out("I can't find the chromedriver, so I'm downloading and installing it for you...")
-        path = chromedriver_autoinstaller.install(cwd=True)
-        tmprinter.out("")
-        drivers = [str(x.absolute()) for x in Path('.').rglob('chromedriver*') if x.name.lower() == "chromedriver" or x.name.lower() == "chromedriver.exe"]
-        if drivers:
-            return path
-        else:
-            exit(f"I can't find the chromedriver.\nI installed it in \"{path}\" but it must be in the GHunt directory or PATH, you should move it here.")
+        exit(f"I can't find the chromedriver.\nI installed it in \"{path}\" but it must be in the GHunt directory or PATH, you should move it here.")
 
 
 def get_chrome_options_args(is_headless):

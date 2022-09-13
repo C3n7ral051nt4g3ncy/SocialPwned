@@ -36,8 +36,8 @@ def fetch(email, client, config):
         cookies = {"CONSENT": config.default_consent_cookie}
         client.cookies = cookies
     url_endpoint = f"https://calendar.google.com/calendar/u/0/embed?src={email}"
-    print(colors.info + " Google Calendar : " + url_endpoint + colors.end)
-    req = client.get(url_endpoint + "&hl=en")
+    print(f"{colors.info} Google Calendar : {url_endpoint}{colors.end}")
+    req = client.get(f"{url_endpoint}&hl=en")
     source = req.text
     try:
         # parsing parameters from source code
@@ -73,7 +73,7 @@ def out(events):
     after = [date for date in events if date["start"] >= now][:limit]
     before = [date for date in events if date["start"] <= now][:limit]
     print(f"\n=> The {'next' if after else 'last'} {len(after) if after else len(before)} event{'s' if (len(after) > 1) or (not after and len(before) > 1) else ''} :")
-    target = after if after else before
+    target = after or before
 
     table = BeautifulTable()
     table.set_style(BeautifulTable.STYLE_GRID)
@@ -82,9 +82,8 @@ def out(events):
         title = event["title"]
         duration = relativedelta(event["end"], event["start"])
         if duration.days or duration.hours or duration.minutes:
-            duration = (f"{(str(duration.days) + ' day' + ('s' if duration.days > 1 else '')) if duration.days else ''} "
-                f"{(str(duration.hours) + ' hour' + ('s' if duration.hours > 1 else '')) if duration.hours else ''} "
-                f"{(str(duration.minutes) + ' minute' + ('s' if duration.minutes > 1 else '')) if duration.minutes else ''}").strip()
+            duration = f"{f'{str(duration.days)} day' + ('s' if duration.days > 1 else '') if duration.days else ''} {f'{str(duration.hours)} hour' + ('s' if duration.hours > 1 else '') if duration.hours else ''} {f'{str(duration.minutes)} minute' + ('s' if duration.minutes > 1 else '') if duration.minutes else ''}".strip()
+
         else:
             duration = "?"
         date = event["start"].strftime("%Y/%m/%d %H:%M:%S")

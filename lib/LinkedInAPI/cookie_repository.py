@@ -46,15 +46,14 @@ class CookieRepository(object):
         """
         Return the absolute path of the cookiejar for a given username
         """
-        return "{}{}.jr".format(settings.COOKIE_PATH, username)
+        return f"{settings.COOKIE_PATH}{username}.jr"
 
     @staticmethod
     def _load_cookies_from_cache(username):
         cookiejar_filepath = CookieRepository._get_cookies_filepath(username)
         try:
             with open(cookiejar_filepath, "rb") as f:
-                cookies = pickle.load(f)
-                return cookies
+                return pickle.load(f)
         except FileNotFoundError:
             return None
 

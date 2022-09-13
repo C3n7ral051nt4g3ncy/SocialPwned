@@ -22,10 +22,7 @@ warnings.filterwarnings("ignore")
 
 def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headless):
     def get_datetime(datepublished):
-        if datepublished.split()[0] == "a":
-            nb = 1
-        else:
-            nb = int(datepublished.split()[0])
+        nb = 1 if datepublished.split()[0] == "a" else int(datepublished.split()[0])
         if "minute" in datepublished:
             delta = relativedelta(minutes=nb)
         elif "hour" in datepublished:
@@ -40,16 +37,19 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
             delta = relativedelta(years=nb)
         else:
             delta = relativedelta()
-        return (datetime.today() - delta).replace(microsecond=0, second=0)
+        return (datetime.now() - delta).replace(microsecond=0, second=0)
 
     tmprinter = TMPrinter()
 
     base_url = f"https://www.google.com/maps/contrib/{gaiaID}/reviews?hl=en"
-    print(colors.good + f" Google Maps : {base_url.replace('?hl=en', '')}" + colors.end)
+    print(
+        f"{colors.good} Google Maps : {base_url.replace('?hl=en', '')}{colors.end}"
+    )
+
 
     reviews_url = base_url.replace('?hl=en', '')
 
-    tmprinter.out(colors.info +" Initial request..." + colors.end)
+    tmprinter.out(f"{colors.info} Initial request...{colors.end}")
 
     req = client.get(base_url)
     source = req.text
@@ -58,7 +58,7 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
 
     if "/maps/reviews/data" not in data:
         tmprinter.out("")
-        print(colors.info +" No reviews" + colors.end)
+        print(f"{colors.info} No reviews{colors.end}")
         return False
 
     chrome_options = get_chrome_options_args(is_headless)
@@ -66,22 +66,22 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
         'connection_timeout': None  # Never timeout, otherwise it floods errors
     }
 
-    tmprinter.out(colors.info +" Starting browser..." + colors.end)
+    tmprinter.out(f"{colors.info} Starting browser...{colors.end}")
 
     driverpath = get_driverpath()
     driver = webdriver.Chrome(executable_path=driverpath, seleniumwire_options=options, chrome_options=chrome_options)
     driver.header_overrides = headers
     wait = WebDriverWait(driver, 15)
 
-    tmprinter.out(colors.info + " Setting cookies..." + colors.end)
+    tmprinter.out(f"{colors.info} Setting cookies...{colors.end}")
     driver.get("https://www.google.com/robots.txt")
-    
+
     if not config.gmaps_cookies:
         cookies = {"CONSENT": config.default_consent_cookie}
     for k, v in cookies.items():
         driver.add_cookie({'name': k, 'value': v})
 
-    tmprinter.out(colors.info + " Fetching reviews page..." + colors.end)
+    tmprinter.out(f"{colors.info} Fetching reviews page...{colors.end}")
     driver.get(base_url)
 
     wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'div.section-scrollbox')))
@@ -89,34 +89,52 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
 
     tab_info = scrollbox.find_element_by_tag_name("div")
     if tab_info:
-        scroll_max = sum([int(x) for x in tab_info.text.split() if x.isdigit()])
+        scroll_max = sum(int(x) for x in tab_info.text.split() if x.isdigit())
     else:
         return False
 
     tmprinter.clear()
-    print(colors.good +f" {scroll_max} reviews found !" + colors.end)
+    print(f"{colors.good} {scroll_max} reviews found !{colors.end}")
 
     timeout = scroll_max * 1.25
     timeout_start = time.time()
     reviews_elements = driver.find_elements_by_xpath('//div[@data-review-id][@aria-label]')
-    tmprinter.out(colors.info + f" Fetching reviews... ({len(reviews_elements)}/{scroll_max})" + colors.end)
+    tmprinter.out(
+        f"{colors.info} Fetching reviews... ({len(reviews_elements)}/{scroll_max}){colors.end}"
+    )
+
     while len(reviews_elements) < scroll_max:
         driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", scrollbox)
         reviews_elements = driver.find_elements_by_xpath('//div[@data-review-id][@aria-label]')
-        tmprinter.out(colors.info + f" Fetching reviews... ({len(reviews_elements)}/{scroll_max})" + colors.end)
+        tmprinter.out(
+            f"{colors.info} Fetching reviews... ({len(reviews_elements)}/{scroll_max}){colors.end}"
+        )
+
         if time.time() > timeout_start + timeout:
-            tmprinter.out(colors.info + f" Timeout while fetching reviews !" + colors.end)
+            tmprinter.out(f"{colors.info} Timeout while fetching reviews !{colors.end}")
             break
 
-    tmprinter.out(colors.info + " Fetching internal requests history..." + colors.end)
+    tmprinter.out(
+        f"{colors.info} Fetching internal requests history...{colors.end}"
+    )
+
     requests = [r.url for r in driver.requests if "locationhistory" in r.url]
-    tmprinter.out(colors.info + f" Fetching internal requests... (0/{len(requests)})" + colors.end)
+    tmprinter.out(
+        f"{colors.info} Fetching internal requests... (0/{len(requests)}){colors.end}"
+    )
+
     for nb, load in enumerate(requests):
         req = client.get(load)
         data += req.text.replace('\n', '')
-        tmprinter.out(colors.info + f" Fetching internal requests... ({nb + 1}/{len(requests)})" + colors.end)
+        tmprinter.out(
+            f"{colors.info} Fetching internal requests... ({nb + 1}/{len(requests)}){colors.end}"
+        )
 
-    tmprinter.out(colors.info + f" Fetching reviews location... (0/{len(reviews_elements)})"+ colors.end)
+
+    tmprinter.out(
+        f"{colors.info} Fetching reviews location... (0/{len(reviews_elements)}){colors.end}"
+    )
+
     reviews = []
     rating = 0
     for nb, review in enumerate(reviews_elements):
@@ -129,11 +147,17 @@ def scrape(gaiaID, client, cookies, config, headers, regex_rev_by_id, is_headles
         rating += int(stars.get_attribute("aria-label").strip().split()[0])
         date = get_datetime(stars.find_element_by_xpath("following-sibling::span").text)
         reviews.append({"location": location, "date": date})
-        tmprinter.out(colors.info + f" Fetching reviews location... ({nb + 1}/{len(reviews_elements)})" + colors.end)
+        tmprinter.out(
+            f"{colors.info} Fetching reviews location... ({nb + 1}/{len(reviews_elements)}){colors.end}"
+        )
+
 
     rating_avg = rating / len(reviews)
     tmprinter.clear()
-    print(colors.good + f" Average rating : {int(rating_avg) if int(rating_avg) / round(rating_avg, 1) == 1 else round(rating_avg, 1)}/5 stars !" + colors.end)
+    print(
+        f"{colors.good} Average rating : {int(rating_avg) if int(rating_avg) / round(rating_avg, 1) == 1 else round(rating_avg, 1)}/5 stars !{colors.end}"
+    )
+
     # 4.9 => 4.9, 5.0 => 5, we don't show the 0
     return {"reviews_url":reviews_url,"reviews":reviews}
 

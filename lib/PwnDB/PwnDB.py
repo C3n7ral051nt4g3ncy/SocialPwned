@@ -7,7 +7,7 @@ from core.colors import colors
 
 def haveIBeenPwned(email):
     
-    url = 'https://haveibeenpwned.com:443/account/'+str(email)
+    url = f'https://haveibeenpwned.com:443/account/{str(email)}'
     payload = ""
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -19,7 +19,7 @@ def haveIBeenPwned(email):
         "Accept-Language": "en-US,en;q=0.5"
         }
 
-    print(colors.info + " Searching information about Leaks found :)" + colors.end)
+    print(f"{colors.info} Searching information about Leaks found :){colors.end}")
 
     try:
         response = requests.request("GET", url, data=payload, headers=headers, verify=False)
@@ -29,7 +29,7 @@ def haveIBeenPwned(email):
 
         infoAboutLeak = []
         if pwned:
-            print(colors.info + " Sources Found" + colors.end)
+            print(f"{colors.info} Sources Found{colors.end}")
             sources = response.xpath('//div[@id="pwnedSites"]/div/@id').getall()
             descriptions = response.xpath('//div[@id="pwnedSites"]/div[@class="pwnedSearchResult pwnedWebsite panel-collapse in"]/div[@class="container"]/div[@class="row"]/div[@class="col-sm-10"]').xpath('.//p')
 
@@ -38,13 +38,13 @@ def haveIBeenPwned(email):
                 if (idx % 2) == 0:
                     index_source = idx // 2
                     text = striphtml(text)
-                    infoAboutLeak.append(json.dumps({'Source': sources[index_source], 'Description': text}))      
+                    infoAboutLeak.append(json.dumps({'Source': sources[index_source], 'Description': text}))
         else:
-            print(colors.info + " Sources not Found" + colors.end)
+            print(f"{colors.info} Sources not Found{colors.end}")
     except Exception as e:
         print(e)
         infoAboutLeak.append(" Sources not found")
-    
+
     return infoAboutLeak
 
 def striphtml(data):
@@ -74,7 +74,7 @@ def parsePwndbResponse(mail,text):
         if leaked_email != "donate" and domain != "btc.thx" and password != "12cC7BdkBbru6JGsWvTx4PPM5LjLX8g":
             foundLeak = True
             emails.append(json.dumps({'username': leaked_email, 'domain': domain, 'password': password}))
-    
+
     if foundLeak:
         emails.append(haveIBeenPwned(mail))
 
@@ -83,12 +83,16 @@ def parsePwndbResponse(mail,text):
 def findLeak(emails,tor_proxy):
     
     session = requests.session()
-    session.proxies = {'http': 'socks5h://{}'.format(tor_proxy), 'https': 'socks5h://{}'.format(tor_proxy)}
+    session.proxies = {
+        'http': f'socks5h://{tor_proxy}',
+        'https': f'socks5h://{tor_proxy}',
+    }
+
 
     url = "http://pwndb2am4tzkvold.onion/"
     leaks = []
-    
-    print(colors.info + " Searching Leaks :)" + colors.end)
+
+    print(f"{colors.info} Searching Leaks :){colors.end}")
     for email in emails:
 
         item = json.loads(email)
@@ -107,15 +111,18 @@ def findLeak(emails,tor_proxy):
             print(colors.bad + " Can't connect to service! restart tor service and try again." + colors.end)
             print(e)
             return leaks
-        print(colors.info + " Searching: " + mail + colors.end)
+        print(f"{colors.info} Searching: {mail}{colors.end}")
         if response.status_code == 200:
             target = {'user': user, 'userID': userID, 'email': mail, 'leak': parsePwndbResponse(mail,response.text)}
             leaks.append(target)
-            print(colors.good + " The request was successful" + colors.end)
+            print(f"{colors.good} The request was successful{colors.end}")
         else:
             print(response.status_code)
             print(response.text)
-            print(colors.bad + " The request was not successful for the user: " + colors.W + user + colors.R + " and email: " + colors.W + mail + colors.R + ". Maybe you should increase the delay" + colors.end)
+            print(
+                f"{colors.bad} The request was not successful for the user: {colors.W}{user}{colors.R} and email: {colors.W}{mail}{colors.R}. Maybe you should increase the delay{colors.end}"
+            )
+
 
     return leaks
 

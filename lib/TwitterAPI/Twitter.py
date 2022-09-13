@@ -49,20 +49,20 @@ def getTweets(
         c.All = username
     if profile_full:
         c.Profile_full = True
-    
+
     c.Store_object = True
     c.Store_object_tweets_list = tweets
 
     # Run
     twint.run.Search(c)
-    
+
     return getListOfTweets(tweets)
     
 def getFollowers(
     username,
     limit = 100
     ):  
-    
+
     users = []
 
     c = twint.Config()
@@ -77,7 +77,7 @@ def getFollowings(
     username,
     limit = 100
     ):
-    
+
     users = []
 
     c = twint.Config()
@@ -90,14 +90,16 @@ def getFollowings(
 
 
 def getUserInformation(username):
-    print(colors.good + " Getting the information from the user: " + username + "\n" + colors.W)
+    print(
+        f"{colors.good} Getting the information from the user: {username}"
+        + "\n"
+        + colors.W
+    )
+
     c = twint.Config()
     c.Username = username
     twint.run.Lookup(c)
     print("\n"+colors.end)
 
 def getListOfTweets(tweets):
-    results = []
-    for tweet in tweets:
-        results.append(tweet.__dict__)
-    return results
+    return [tweet.__dict__ for tweet in tweets]

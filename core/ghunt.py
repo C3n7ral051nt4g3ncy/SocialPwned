@@ -14,13 +14,15 @@ def checkAndGen(ghunt_SID,ghunt_SSID,ghunt_APISID,ghunt_SAPISID,ghunt_HSID):
     check_and_gen(ghunt_SID,ghunt_SSID,ghunt_APISID,ghunt_SAPISID,ghunt_HSID)
 
 def emailHunt(email):
-    print(colors.info + " Extracting information from email: " + email + colors.end)
+    print(f"{colors.info} Extracting information from email: {email}{colors.end}")
     result = email_hunt(email)
 
-    if result != False:
-        if SocialPwned.updateLeaksGhunt(email,result) == False:
-            # This case should never occur, because if we have email, we have id
-            SocialPwned(email,name = "",linkedin = {},instagram = {},twitter = {},leaks = {"pwndb":[],"dehashed":[],"ghunt":result})
+    if (
+        result != False
+        and SocialPwned.updateLeaksGhunt(email, result) == False
+    ):
+        # This case should never occur, because if we have email, we have id
+        SocialPwned(email,name = "",linkedin = {},instagram = {},twitter = {},leaks = {"pwndb":[],"dehashed":[],"ghunt":result})
 
 def emailsListHunt(emails):
 

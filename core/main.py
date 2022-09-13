@@ -20,7 +20,7 @@ def readCredentials(credentialsFile):
             data = json.load(json_file)
         json_file.close()
     except:
-        print(colors.bad + " Incorrect JSON format" + colors.end)
+        print(f"{colors.bad} Incorrect JSON format{colors.end}")
         sys.exit()
 
     return data
@@ -51,41 +51,41 @@ def instagramParameters(args,ig_username,ig_password,out_dir):
                     followers = instagram.getUserFollowers(api,args.target_ig)
                     followings =  instagram.getUserFollowings(api,args.target_ig)
                     results.extend(instagram.sortContacts(followers,followings))
-                if results == []:
-                    print(colors.info + " No public emails found :(" + colors.end)
+                if not results:
+                    print(f"{colors.info} No public emails found :({colors.end}")
 
-              
+
         if args.location:
             results.extend(instagram.getUsersFromLocation(api,args.location))
 
         if args.search_users_ig:
             results.extend(instagram.getUsersOfTheSearch(api,args.search_users_ig))
-            
+
         if args.my_followers and not args.my_followings:
             results.extend(instagram.getMyFollowers(api))
-            
+
         if args.my_followings and not args.my_followers:
             results.extend(instagram.getMyFollowings(api))
-            
+
         if args.my_followings and args.my_followers:
             followers = instagram.getMyFollowers(api)
             followings = instagram.getMyFollowings(api)
-            results.extend(instagram.sortContacts(followers,followings))  
+            results.extend(instagram.sortContacts(followers,followings))
     else:
         print(colors.bad + " Can't Login to Instagram!" + colors.end)
-    
+
     output.saveResultsInstagram(out_dir,results)
 
     return results
     
 
 def linkedinParameters(args,in_email,in_password,out_dir):
-    
+
     results = []
     api = Linkedin(in_email, in_password)
     if api.__dict__.get("success"):
         print(colors.good + " Successful login to Linkedin!\n" + colors.end)
-        
+
         if args.company:
             linkedin.getCompanyInformation(api,args.company)
             users = []
@@ -192,7 +192,7 @@ def ghuntParameters(args,ghunt_SID,ghunt_SSID,ghunt_APISID,ghunt_SAPISID,ghunt_H
     if results != []:
         ghunt.emailsListHunt(results)
     else:
-        print(colors.bad + " No emails for Ghunt" + colors.end)
+        print(f"{colors.bad} No emails for Ghunt{colors.end}")
 
 def dehashedParameters(args,dehashed_email,dehashed_apikey,results,out_dir):
     print(colors.good + " Using Dehashed!\n" + colors.end)
@@ -202,7 +202,7 @@ def dehashedParameters(args,dehashed_email,dehashed_apikey,results,out_dir):
     if results != []:
         dehashed_results = DehashedAPI.dehashedRequest(dehashed_email,dehashed_apikey,results)
     else:
-        print(colors.bad + " No emails for Dehashed" + colors.end)
+        print(f"{colors.bad} No emails for Dehashed{colors.end}")
 
     if args.email_dh:
         dehashed_results.append(DehashedAPI.singleDehashedEmailSearch(dehashed_email,dehashed_apikey,email=args.email_dh))
@@ -214,7 +214,7 @@ def run(args):
     results = []
     creds = ''
     session = 'session_' + datetime.datetime.now().strftime('%Y_%m_%d_%H%M%S')
-    out_dir = 'output/' + session
+    out_dir = f'output/{session}'
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
@@ -239,10 +239,10 @@ def run(args):
         in_email = creds.get("linkedin").get("email")
         in_password = creds.get("linkedin").get("password")
         results.extend(linkedinParameters(args,in_email,in_password,out_dir))
-    
+
     if args.twitter:
         results.extend(twitterParameters(args,out_dir))
-    
+
     if args.ghunt:
         ghunt_SID = creds.get("ghunt").get("SID")
         ghunt_SSID = creds.get("ghunt").get("SSID")
@@ -256,7 +256,7 @@ def run(args):
         dehashed_apikey = creds.get("dehashed").get("apikey")
         dehashedParameters(args,dehashed_email,dehashed_apikey,results,out_dir)
 
-    if results != [] and results != False:
+    if results not in [[], False]:
         output.saveEmails(out_dir,results)
         if args.pwndb:
             print(colors.good + " Using PwnDB!\n" + colors.end)

@@ -23,39 +23,36 @@ class ExifEater():
             exif = img._getexif()
 
             for (idx, tag) in TAGS.items():
-                if tag == 'GPSInfo':
-                    if idx in exif:
-                        for (key, val) in GPSTAGS.items():
-                            if key in exif[idx]:
-                                geotags[val] = exif[idx][key]
+                if tag == 'GPSInfo' and idx in exif:
+                    for (key, val) in GPSTAGS.items():
+                        if key in exif[idx]:
+                            geotags[val] = exif[idx][key]
 
-                        for axis in ["Latitude", "Longitude"]:
-                            dms = geotags[f'GPS{axis}']
-                            ref = geotags[f'GPS{axis}Ref']
+                    for axis in ["Latitude", "Longitude"]:
+                        dms = geotags[f'GPS{axis}']
+                        ref = geotags[f'GPS{axis}Ref']
 
-                            degrees = dms[0][0] / dms[0][1]
-                            minutes = dms[1][0] / dms[1][1] / 60.0
-                            seconds = dms[2][0] / dms[2][1] / 3600.0
+                        degrees = dms[0][0] / dms[0][1]
+                        minutes = dms[1][0] / dms[1][1] / 60.0
+                        seconds = dms[2][0] / dms[2][1] / 3600.0
 
-                            if ref in ['S', 'W']:
-                                degrees = -degrees
-                                minutes = -minutes
-                                seconds = -seconds
+                        if ref in ['S', 'W']:
+                            degrees = -degrees
+                            minutes = -minutes
+                            seconds = -seconds
 
-                            geoaxis[axis] = round(degrees + minutes + seconds, 5)
-                        location = \
-                        self.geolocator.reverse("{}, {}".format(geoaxis["Latitude"], geoaxis["Longitude"])).raw[
-                            "address"]
+                        geoaxis[axis] = round(degrees + minutes + seconds, 5)
+                    location = self.geolocator.reverse(
+                        f'{geoaxis["Latitude"]}, {geoaxis["Longitude"]}'
+                    ).raw["address"]
+
         except Exception:
             return ""
         else:
-            if location:
-                location = sanitize_location(location)
-                if not location:
-                    return ""
-                return f'{location["town"]}, {location["country"]}'
-            else:
+            if not location:
                 return ""
+            location = sanitize_location(location)
+            return f'{location["town"]}, {location["country"]}' if location else ""
 
     def feed(self, img):
         try:

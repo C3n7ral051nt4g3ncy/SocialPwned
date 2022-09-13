@@ -12,11 +12,18 @@ def search(query, data_path, gdocs_public_doc, size=1000):
         out = json.loads(f.read())
         token = out["keys"]["gdoc"]
         cookies = out["cookies"]
-    data = {"request": '["documentsuggest.search.search_request","{}",[{}],null,1]'.format(query, size)}
-    req = httpx.post('https://docs.google.com/document/d/{}/explore/search?token={}'.format(gdocs_public_doc, token),
-                     cookies=cookies, data=data)
+    data = {
+        "request": f'["documentsuggest.search.search_request","{query}",[{size}],null,1]'
+    }
+
+    req = httpx.post(
+        f'https://docs.google.com/document/d/{gdocs_public_doc}/explore/search?token={token}',
+        cookies=cookies,
+        data=data,
+    )
+
     if req.status_code != 200:
-        exit("Error (GDocs): request gives {}".format(req.status_code))
+        exit(f"Error (GDocs): request gives {req.status_code}")
 
     output = json.loads(req.text.replace(")]}'", ""))
     #pprint(output)

@@ -27,58 +27,55 @@ class SocialPwned:
     def toJSON():
         return json.dumps([ob.__dict__ for ob in socialpwned], default=lambda o: o.__dict__, indent=4)
 
-    def create_json(out_dir):
-        socialpwned_json = out_dir + '/socialpwned.json'
+    def create_json(self):
+        socialpwned_json = f'{self}/socialpwned.json'
         with open(socialpwned_json, "w") as file:
             file.write(SocialPwned.toJSON())
 
-    def checkID(email):
+    def checkID(self):
 
         targets = SocialPwned.getListOfTargets()
-        for target in targets:
-            if target.get("id") == email:
-                return True
-        return False
+        return any(target.get("id") == self for target in targets)
 
-    def updateLinkedin(id,linkedin_list):
+    def updateLinkedin(self, linkedin_list):
         for pwn in socialpwned:
-            if pwn.__dict__.get("id") == id:
+            if pwn.__dict__.get("id") == self:
                 pwn.__dict__.get("linkedin").update(linkedin_list)
                 return True
         return False
 
-    def updateInstagram(id,instagram_list):
+    def updateInstagram(self, instagram_list):
         for pwn in socialpwned:
-            if pwn.__dict__.get("id") == id:
+            if pwn.__dict__.get("id") == self:
                 pwn.__dict__.get("instagram").update(instagram_list)
                 return True
         return False
 
-    def updateTwitter(id,twitter_list):
+    def updateTwitter(self, twitter_list):
         for pwn in socialpwned:
-            if pwn.__dict__.get("id") == id:
+            if pwn.__dict__.get("id") == self:
                 pwn.__dict__.get("twitter").update(twitter_list)
                 return True
         return False
 
-    def updateLeaksPwnDB(id,pwndb):
+    def updateLeaksPwnDB(self, pwndb):
 
         for pwn in socialpwned:
-            if pwn.__dict__.get("id") == id:
+            if pwn.__dict__.get("id") == self:
                 pwn.__dict__.get("leaks")["pwndb"].append(pwndb)
                 return True
         return False
 
-    def updateLeaksDehashed(id,dehashed):
+    def updateLeaksDehashed(self, dehashed):
         for pwn in socialpwned:
-            if pwn.__dict__.get("id") == id:
+            if pwn.__dict__.get("id") == self:
                 pwn.__dict__.get("leaks")["dehashed"].append(dehashed)
                 return True
         return False
 
-    def updateLeaksGhunt(id,ghunt):
+    def updateLeaksGhunt(self, ghunt):
         for pwn in socialpwned:
-            if pwn.__dict__.get("id") == id:
+            if pwn.__dict__.get("id") == self:
                 pwn.__dict__.get("leaks").get("ghunt").update(ghunt)
                 return True
         return False

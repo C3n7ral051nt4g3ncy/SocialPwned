@@ -55,7 +55,7 @@ class Linkedin(object):
                 self.success = True
         except Exception as e:
             self.success = False
-            print(colors.bad + " Linkedin: " + str(e) + colors.end)
+            print(f"{colors.bad} Linkedin: {str(e)}{colors.end}")
 
 
     def _fetch(self, uri, evade=default_evade, **kwargs):
@@ -93,7 +93,7 @@ class Linkedin(object):
             "start": len(results),
             "queryContext": "List(spellCorrectionEnabled->true,relatedSearchesEnabled->true,kcardTypes->PROFILE|COMPANY)",
         }
-        default_params.update(params)
+        default_params |= params
 
         res = self._fetch(
             f"/search/blended?{urlencode(default_params, safe='(),')}",
@@ -120,7 +120,7 @@ class Linkedin(object):
                 len(results) >= limit  # if our results exceed set limit
                 or len(results) / count >= Linkedin._MAX_REPEATED_REQUESTS
             )
-        ) or len(new_elements) == 0:
+        ) or not new_elements:
             return results
 
         self.logger.debug(f"results grew to {len(results)}")
@@ -168,7 +168,7 @@ class Linkedin(object):
         if title:
             filters.append(f"title->{title}")
 
-        params = {"filters": "List({})".format(",".join(filters))}
+        params = {"filters": f'List({",".join(filters)})'}
 
         if keywords:
             keywords = keywords.replace(',','')
@@ -176,21 +176,16 @@ class Linkedin(object):
 
         data = self.search(params, limit=limit)
 
-        results = []
-        for item in data:
-            if "publicIdentifier" not in item:
-                continue
-            #print(item)
-            results.append(
-                {
-                    "urn_id": get_id_from_urn(item.get("targetUrn")),
-                    "distance": item.get("memberDistance", {}).get("value"),
-                    "public_id": item.get("publicIdentifier"),
-                    "name": item.get("title", {}).get("text")
-                }
-            )
-
-        return results
+        return [
+            {
+                "urn_id": get_id_from_urn(item.get("targetUrn")),
+                "distance": item.get("memberDistance", {}).get("value"),
+                "public_id": item.get("publicIdentifier"),
+                "name": item.get("title", {}).get("text"),
+            }
+            for item in data
+            if "publicIdentifier" in item
+        ]
 
     def search_companies(self, keywords=None, limit=None):
         """
@@ -199,9 +194,10 @@ class Linkedin(object):
         filters = ["resultType->COMPANIES"]
 
         params = {
-            "filters": "List({})".format(",".join(filters)),
+            "filters": f'List({",".join(filters)})',
             "queryContext": "List(spellCorrectionEnabled->true)",
         }
+
 
         if keywords:
             keywords = keywords.replace(',','')
@@ -209,21 +205,17 @@ class Linkedin(object):
 
         data = self.search(params, limit=limit)
 
-        results = []
-        for item in data:
-            if item.get("type") != "COMPANY":
-                continue
-            results.append(
-                {
-                    "urn": item.get("targetUrn"),
-                    "urn_id": get_id_from_urn(item.get("targetUrn")),
-                    "name": item.get("title", {}).get("text"),
-                    "headline": item.get("headline", {}).get("text"),
-                    "subline": item.get("subline", {}).get("text"),
-                }
-            )
-
-        return results
+        return [
+            {
+                "urn": item.get("targetUrn"),
+                "urn_id": get_id_from_urn(item.get("targetUrn")),
+                "name": item.get("title", {}).get("text"),
+                "headline": item.get("headline", {}).get("text"),
+                "subline": item.get("subline", {}).get("text"),
+            }
+            for item in data
+            if item.get("type") == "COMPANY"
+        ]
 
     def get_profile_contact_info(self, public_id=None, urn_id=None):
         """
@@ -295,7 +287,7 @@ class Linkedin(object):
 
         data = res.json()
         if data and "status" in data and data["status"] != 200:
-            self.logger.info("request failed: {}".format(data["message"]))
+            self.logger.info(f'request failed: {data["message"]}')
             return {}
 
         # massage [profile] data
@@ -319,10 +311,9 @@ class Linkedin(object):
         for item in experience:
             if "company" in item and "miniCompany" in item["company"]:
                 if "logo" in item["company"]["miniCompany"]:
-                    logo = item["company"]["miniCompany"]["logo"].get(
+                    if logo := item["company"]["miniCompany"]["logo"].get(
                         "com.linkedin.common.VectorImage"
-                    )
-                    if logo:
+                    ):
                         item["companyLogoUrl"] = logo["rootUrl"]
                 del item["company"]["miniCompany"]
 
@@ -337,12 +328,11 @@ class Linkedin(object):
         # massage [education] data
         education = data["educationView"]["elements"]
         for item in education:
-            if "school" in item:
-                if "logo" in item["school"]:
-                    item["school"]["logoUrl"] = item["school"]["logo"][
-                        "com.linkedin.common.VectorImage"
-                    ]["rootUrl"]
-                    del item["school"]["logo"]
+            if "school" in item and "logo" in item["school"]:
+                item["school"]["logoUrl"] = item["school"]["logo"][
+                    "com.linkedin.common.VectorImage"
+                ]["rootUrl"]
+                del item["school"]["logo"]
 
         profile["education"] = education
 
@@ -393,7 +383,10 @@ class Linkedin(object):
         GET current profile
         """
         response = self._fetch(
-            f'/me/', headers={"accept": "application/vnd.linkedin.normalized+json+2.1"})
+            '/me/',
+            headers={"accept": "application/vnd.linkedin.normalized+json+2.1"},
+        )
+
         data = response.json()
 
         profile = {
@@ -407,7 +400,7 @@ class Linkedin(object):
 
         try:
             profile['avatarUrl'] = data['included'][0]['picture']['rootUrl'] + \
-                data['included'][0]['picture']['artifacts'][2]['fileIdentifyingUrlPathSegment']
+                    data['included'][0]['picture']['artifacts'][2]['fileIdentifyingUrlPathSegment']
         except TypeError:
             profile['avatarUrl'] = None
 
@@ -430,7 +423,7 @@ class Linkedin(object):
             "start": len(results),
         }
 
-        res = self._fetch(f"/feed/updates", params=params)
+        res = self._fetch("/feed/updates", params=params)
 
         data = res.json()
 
@@ -468,7 +461,7 @@ class Linkedin(object):
             "start": len(results),
         }
 
-        res = self._fetch(f"/feed/updates", params=params)
+        res = self._fetch("/feed/updates", params=params)
 
         data = res.json()
 
@@ -493,7 +486,7 @@ class Linkedin(object):
         """
         Get profile view statistics, including chart data.
         """
-        res = self._fetch(f"/identity/wvmpCards")
+        res = self._fetch("/identity/wvmpCards")
 
         data = res.json()
         return data["elements"][0]["value"][
@@ -521,12 +514,10 @@ class Linkedin(object):
         data = res.json()
 
         if data and "status" in data and data["status"] != 200:
-            self.logger.info("request failed: {}".format(data))
+            self.logger.info(f"request failed: {data}")
             return {}
 
-        school = data["elements"][0]
-
-        return school
+        return data["elements"][0]
 
     def get_company(self, public_id):
         """
@@ -540,17 +531,15 @@ class Linkedin(object):
             "universalName": public_id,
         }
 
-        res = self._fetch(f"/organization/companies", params=params)
+        res = self._fetch("/organization/companies", params=params)
 
         data = res.json()
 
         if data and "status" in data and data["status"] != 200:
-            self.logger.info("request failed: {}".format(data["message"]))
+            self.logger.info(f'request failed: {data["message"]}')
             return {}
 
-        company = data["elements"][0]
-
-        return company
+        return data["elements"][0]
 
     def get_conversation_details(self, profile_urn_id):
         """
@@ -576,7 +565,7 @@ class Linkedin(object):
         """
         params = {"keyVersion": "LEGACY_INBOX"}
 
-        res = self._fetch(f"/messaging/conversations", params=params)
+        res = self._fetch("/messaging/conversations", params=params)
 
         return res.json()
 
@@ -596,7 +585,7 @@ class Linkedin(object):
         """
         params = {"action": "create"}
 
-        if not (conversation_urn_id or recipients) and not message_body:
+        if not conversation_urn_id and not recipients and not message_body:
             return True
 
         message_event = {
@@ -626,8 +615,9 @@ class Linkedin(object):
                 "conversationCreate": message_event,
             }
             res = self._post(
-                f"/messaging/conversations", params=params, data=json.dumps(payload)
+                "/messaging/conversations", params=params, data=json.dumps(payload)
             )
+
 
         return res.status_code != 201
 
@@ -651,11 +641,9 @@ class Linkedin(object):
             random.randint(0, 1)
         )  # sleep a random duration to try and evade suspention
 
-        res = self._fetch(f"/me")
+        res = self._fetch("/me")
 
-        data = res.json()
-
-        return data
+        return res.json()
 
     def get_invitations(self, start=0, limit=3):
         """

@@ -9,7 +9,7 @@ from core.socialpwned import SocialPwned
 def getEmailsFromListOfUsers(api,items):
     targets = []
     print(colors.info + " Searching users... :) \n" + colors.end)
-    
+
     for item in items:
 
         user = str(item.get("user").get("username"))
@@ -19,20 +19,26 @@ def getEmailsFromListOfUsers(api,items):
 
 def getUserProfile(api,username):
 
-        print(colors.info + " Getting information from the user: " + str(username) + colors.end)
-        time.sleep(float(0.5))
-        api.searchUsername(username)
+    print(
+        f"{colors.info} Getting information from the user: {str(username)}{colors.end}"
+    )
 
-        if api.LastResponse.status_code == 429:
-            print(colors.bad + " The request was not successful for the user: " + colors.W + username + colors.R + ". Maybe you should increase the delay" + colors.end)
-        
-        return api.LastJson
+    time.sleep(0.5)
+    api.searchUsername(username)
+
+    if api.LastResponse.status_code == 429:
+        print(
+            f"{colors.bad} The request was not successful for the user: {colors.W}{username}{colors.R}. Maybe you should increase the delay{colors.end}"
+        )
+
+
+    return api.LastJson
 
 def getEmailsFromUsers(users):
 
     targets = []
-    print(colors.info + " Searching users with emails :)" + colors.end)
-    
+    print(f"{colors.info} Searching users with emails :){colors.end}")
+
     for user in users:
         if str(user["status"]) == "ok":
 
@@ -43,16 +49,14 @@ def getEmailsFromUsers(users):
             following = str(user["user"].get("following_count"))
             biography = user["user"].get("biography").split(" ")
             private = str(user["user"].get("is_private"))
-            
-            if email != "None" and email !="":
-                targets.append(json.dumps({"user":username,"userID":userID,"email":email,"private":private}))
-                print(colors.good + " Username: " + colors.W + username + colors.B + " UserID: " + colors.W + userID + colors.B + " Email: " + colors.W + email + colors.B + " Followers: " + colors.W + followers + colors.B + " Following: " + colors.W + following + colors.end)
-                insertSocialPwnedTarget(email,{"user":username,"userID":userID,"email":email,"private":private,"followers":followers,"following":following})
-            else:
-                result = searchEmailInBio(biography)
-                if result:
+
+            if email in {"None", ""}:
+                if result := searchEmailInBio(biography):
                     print(colors.info + " The email was found in the user's biography: " + result + colors.end)
-                    print(colors.good + " Username: " + colors.W + username + colors.B + " UserID: " + colors.W + userID + colors.B + " Email: " + colors.W + result + colors.B + " Followers: " + colors.W + followers + colors.B + " Following: " + colors.W + following + colors.end)
+                    print(
+                        f"{colors.good} Username: {colors.W}{username}{colors.B} UserID: {colors.W}{userID}{colors.B} Email: {colors.W}{result}{colors.B} Followers: {colors.W}{followers}{colors.B} Following: {colors.W}{following}{colors.end}"
+                    )
+
                     targets.append(json.dumps({"user":username,"userID":userID,"email":result,"private":private}))
                     insertSocialPwnedTarget(email,{"user":username,"userID":userID,"email":email,"private":private,"followers":followers,"following":following})
                 else:
@@ -60,6 +64,13 @@ def getEmailsFromUsers(users):
 
 
 
+            else:
+                targets.append(json.dumps({"user":username,"userID":userID,"email":email,"private":private}))
+                print(
+                    f"{colors.good} Username: {colors.W}{username}{colors.B} UserID: {colors.W}{userID}{colors.B} Email: {colors.W}{email}{colors.B} Followers: {colors.W}{followers}{colors.B} Following: {colors.W}{following}{colors.end}"
+                )
+
+                insertSocialPwnedTarget(email,{"user":username,"userID":userID,"email":email,"private":private,"followers":followers,"following":following})
     return list(set(targets))
 
 def insertSocialPwnedTarget(id_target,target_list):
@@ -70,17 +81,15 @@ def insertSocialPwnedTarget(id_target,target_list):
 def searchEmailInBio(bio):
     
     for word in bio:
-        match = re.findall(r'[\w.+-]+@[\w-]+\.[\w.-]+',word)
-        if match:
+        if match := re.findall(r'[\w.+-]+@[\w-]+\.[\w.-]+', word):
             return match[0]
 
 def checkUserVisibility(api,targetID):
     api.getUserFeed(targetID)
-    if api.LastJson["status"] == "fail":
-        print(colors.bad + " You are not authorized to view this user. " + colors.end)
-        return False
-    else:
+    if api.LastJson["status"] != "fail":
         return True
+    print(f"{colors.bad} You are not authorized to view this user. {colors.end}")
+    return False
     
 
 def getLocationID(api,location):
@@ -88,7 +97,15 @@ def getLocationID(api,location):
     api.searchLocation(location)
     items = api.LastJson["items"]
     for item in items:
-        print(colors.good + " City: " + colors.W + item.get("location").get("name") + colors.B +" Search ID: " + colors.W + str(item.get("location").get("pk")) + colors.end)
+        print(
+            f"{colors.good} City: {colors.W}"
+            + item.get("location").get("name")
+            + colors.B
+            + " Search ID: "
+            + colors.W
+            + str(item.get("location").get("pk"))
+            + colors.end
+        )
 
 def getUsersFromAHashTag(api,hashtag):
     api.getHashtagFeed(hashtag)
@@ -99,10 +116,9 @@ def getUsersFromLocation(api,locationId):
     return getEmailsFromListOfUsers(api,api.LastJson["items"])
 
 def getUserInformation(api,target):
-    userInfo = []
     api.searchUsername(str(target))
     info = api.LastJson
-    userInfo.append(info)
+    userInfo = [info]
     results = getEmailsFromUsers(userInfo)
 
     if not checkUserVisibility(api,info["user"].get("pk")) and results == []:
@@ -112,7 +128,7 @@ def getUserInformation(api,target):
 
 def getUsersOfTheSearch(api,query):
 
-    print(colors.info + " Searching users..." + colors.end)
+    print(f"{colors.info} Searching users...{colors.end}")
     api.searchUsers(query)
     users = api.LastJson["users"]
     results = []
@@ -121,8 +137,29 @@ def getUsersOfTheSearch(api,query):
         api.searchUsername(user.get("username"))
         results.append(api.LastJson)
         userInfo = api.LastJson["user"]
-        print(colors.good + " Username: " + colors.W + user.get("username") + colors.B + " User ID: " + colors.W + str(user.get("pk")) + colors.B + " Private: " + colors.W + str(user.get("is_private")) + colors.B + " Followers: " + colors.W + str(userInfo.get("follower_count")) + colors.B + " Following: " + colors.W + str(userInfo.get("following_count")) + colors.end)
-    
+        print(
+            f"{colors.good} Username: {colors.W}"
+            + user.get("username")
+            + colors.B
+            + " User ID: "
+            + colors.W
+            + str(user.get("pk"))
+            + colors.B
+            + " Private: "
+            + colors.W
+            + str(user.get("is_private"))
+            + colors.B
+            + " Followers: "
+            + colors.W
+            + str(userInfo.get("follower_count"))
+            + colors.B
+            + " Following: "
+            + colors.W
+            + str(userInfo.get("following_count"))
+            + colors.end
+        )
+
+
     return getEmailsFromUsers(results)
 
 def getMyFollowers(api):
@@ -147,12 +184,9 @@ def getUserFollowings(api,username):
     return getListOfUsers(api,users)
 
 def getListOfUsers(api,users):
-    targets = []
-    print(colors.info + " " + str(len(users)) + " targets have been obtained" + colors.end)
+    print(f"{colors.info} {len(users)} targets have been obtained{colors.end}")
 
-    for user in users:
-        targets.append(getUserProfile(api,user.get("username")))
-        
+    targets = [getUserProfile(api,user.get("username")) for user in users]
     return getEmailsFromUsers(targets)
 
 def sortContacts(followers,followings):
